@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Speech Recognition</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --danger-color: #dc3545;
+            --background-color: #f8f9fa;
+            --card-background: #ffffff;
+            --text-primary: #343a40;
+            --text-secondary: #6c757d;
+            --box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        .header {
+            text-align: center;
+            padding: 2rem;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--box-shadow);
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1rem;
+        }
+
+        .status-container {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .status-card {
+            flex: 1 1 calc(50% - 1rem);
+            background: var(--card-background);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            box-shadow: var(--box-shadow);
+        }
+
+        .status-card h3 {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .status-indicator {
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        .connected {
+            background-color: rgba(0, 123, 255, 0.1);
+            color: var(--primary-color);
+        }
+
+        .disconnected {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: var(--danger-color);
+        }
+
+        .speaking {
+            background-color: rgba(108, 117, 125, 0.1);
+            color: var(--secondary-color);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn:not(:disabled):hover {
+            transform: scale(1.05);
+            box-shadow: var(--box-shadow);
+        }
+
+        .transcription-container {
+            background: var(--card-background);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: var(--box-shadow);
+        }
+
+        .transcription-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--background-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .transcription-content {
+            min-height: 150px;
+            background-color: var(--background-color);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        @media (max-width: 768px) {
+            .status-card {
+                flex: 1 1 100%;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>UST GLOBAL ASSIGNMENT</h1>
+            <p>Speak naturally and see the transcription in real-time</p>
+        </div>
+
+        <div class="status-container">
+            <div class="status-card">
+                <h3><i class="fas fa-plug"></i> Connection Status</h3>
+                <div id="connectionStatus" class="status-indicator disconnected">Not Connected</div>
+            </div>
+            <div class="status-card">
+                <h3><i class="fas fa-microphone"></i> Speech Status</h3>
+                <div id="speechStatus" class="status-indicator">Waiting for audio...</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="startButton" class="btn btn-primary">
+                <i class="fas fa-play"></i> Start Speaking
+            </button>
+            <button id="stopButton" class="btn btn-danger" disabled>
+                <i class="fas fa-stop"></i> Stop Speaking
+            </button>
+        </div>
+
+        <div class="transcription-container">
+            <div class="transcription-header">
+                <i class="fas fa-comment-alt"></i>
+                <h2>Transcription</h2>
+            </div>
+            <div id="transcription" class="transcription-content">
+                Your transcription will appear here...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+let hasPlayedWelcome = false;
+const WELCOME_MESSAGE = "Hi welcome to  U S T global"
+let ws = null;
+let mediaRecorder;
+let audioContext;
+let recording = false;
+let reconnectAttempts = 0;
+let maxReconnectAttempts = 5;
+let reconnectTimeout = null;
+let isPlayingAudio = false;
+let audioQueue = [];
+
+const startButton = document.getElementById('startButton');
+const stopButton = document.getElementById('stopButton');
+const connectionStatus = document.getElementById('connectionStatus');
+const speechStatus = document.getElementById('speechStatus');
+const transcriptionDiv = document.getElementById('transcription');
+
+
+function cleanupWebSocket() {
+    if (ws) {
+        
+        ws.onopen = null;
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.onmessage = null;
+        
+        
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.close();
+        }
+        ws = null;
+    }
+    
+    
+    if (recording) {
+        stopRecording();
+    }
+    
+    
+    if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+    }
+}
+
+
+function setupWebSocket() {
+    cleanupWebSocket();
+    
+    try {
+        ws = new WebSocket(' http://127.0.0.1:7800/ws/stream/');
+
+        ws.onopen = () => {
+            console.log('WebSocket connected');
+            connectionStatus.textContent = 'Connected';
+            connectionStatus.className = 'status-indicator connected';
+            startButton.disabled = false;
+            reconnectAttempts = 0;
+        };
+
+        ws.onclose = (event) => {
+            console.log('WebSocket closed:', event.code, event.reason);
+            connectionStatus.textContent = 'Disconnected';
+            connectionStatus.className = 'status-indicator disconnected';
+            startButton.disabled = true;
+            stopButton.disabled = true;
+            
+            if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++;
+                connectionStatus.textContent = `Reconnecting (${reconnectAttempts}/${maxReconnectAttempts})...`;
+                reconnectTimeout = setTimeout(setupWebSocket, 3000);
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            connectionStatus.textContent = 'Connection Error';
+            connectionStatus.className = 'status-indicator disconnected';
+        };
+
+        ws.onmessage = async (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                
+                if (data.status === 'success') {
+                    
+                    if (data.speech_status === 'started') {
+                        speechStatus.textContent = 'Speech Detected';
+                        speechStatus.className = 'status-indicator speaking pulse';
+                    } else if (data.speech_status === 'ended') {
+                        speechStatus.textContent = 'waiting...';
+                        speechStatus.className = 'status-indicator';
+                    }
+                    
+                    
+                    if (data.llm_response) {
+                        transcriptionDiv.textContent = `You: ${data.transcription}\nAssistant: ${data.llm_response}`;
+                        
+                        if (data.tts_audio) {
+                            audioQueue.push(data.tts_audio);
+                            processAudioQueue();
+                        }
+                    }
+                } else if (data.status === 'error') {
+                    console.error('Error:', data.message);
+                    speechStatus.textContent = 'Error occurred';
+                    speechStatus.className = 'status-indicator disconnected';
+                }
+            } catch (error) {
+                console.error('Error processing message:', error);
+            }
+        };
+    } catch (error) {
+        console.error('Error setting up WebSocket:', error);
+        connectionStatus.textContent = 'Setup Error';
+        connectionStatus.className = 'status-indicator disconnected';
+    }
+}
+async function startRecording() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        alert('WebSocket is not connected. Please wait for reconnection or refresh the page.');
+        return;
+    }
+    
+    try {
+       
+        if (!hasPlayedWelcome) {
+            
+            transcriptionDiv.textContent = `Assistant: ${WELCOME_MESSAGE}`;
+            
+            
+            ws.send(JSON.stringify({
+                type: 'welcome',
+                message: WELCOME_MESSAGE
+            }));
+            
+            hasPlayedWelcome = true;
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioContext = new AudioContext({ sampleRate: 16000 });
+        const source = audioContext.createMediaStreamSource(stream);
+        const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+        source.connect(processor);
+        processor.connect(audioContext.destination);
+
+        processor.onaudioprocess = (e) => {
+            if (!recording || !ws || ws.readyState !== WebSocket.OPEN) {
+                return;
+            }
+            
+            try {
+                const inputData = e.inputBuffer.getChannelData(0);
+                const audioData = new Float32Array(inputData);
+                ws.send(audioData.buffer);
+            } catch (error) {
+                console.error('Error sending audio data:', error);
+                stopRecording();
+            }
+        };
+
+        recording = true;
+        startButton.disabled = true;
+        stopButton.disabled = false;
+        speechStatus.textContent = 'Listening...';
+        speechStatus.className = 'status-indicator speaking';
+        
+        
+        if (hasPlayedWelcome) {
+            transcriptionDiv.textContent = 'Listening for speech...';
+        }
+
+    } catch (error) {
+        console.error('Error accessing microphone:', error);
+        alert('Error accessing microphone. Please ensure microphone permissions are granted.');
+    }
+}
+
+function stopRecording() {
+    recording = false;
+    if (audioContext) {
+        audioContext.close().catch(console.error);
+    }
+    startButton.disabled = false;
+    stopButton.disabled = true;
+    speechStatus.textContent = 'Stopped';
+    speechStatus.className = 'status-indicator';
+    hasPlayedWelcome = false; 
+    
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        try {
+            ws.send(JSON.stringify({ type: 'end' }));
+        } catch (error) {
+            console.error('Error sending end message:', error);
+        }
+    }
+    location.reload();
+}
+
+
+startButton.onclick = startRecording;
+stopButton.onclick = stopRecording;
+
+
+window.addEventListener('beforeunload', () => {
+    cleanupWebSocket();
+});
+
+
+setupWebSocket();
+
+
+
+
+let isPlaying = false;
+
+async function playAudioFromBase64(base64Audio) {
+    if (isPlayingAudio) return;
+    
+    try {
+        isPlayingAudio = true;
+        
+        
+        const binaryString = window.atob(base64Audio);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        
+        if (!window.ttsAudioContext) {
+            window.ttsAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        
+        const audioBuffer = await window.ttsAudioContext.decodeAudioData(bytes.buffer);
+        const source = window.ttsAudioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(window.ttsAudioContext.destination);
+        
+        
+        source.start(0);
+        await new Promise(resolve => {
+            source.onended = resolve;
+        });
+        
+    } catch (error) {
+        console.error('Error playing audio:', error);
+    } finally {
+        isPlayingAudio = false;
+        processAudioQueue();
+    }
+}
+async function processAudioQueue() {
+    if (isPlayingAudio || audioQueue.length === 0) return;
+    const nextAudio = audioQueue.shift();
+    await playAudioFromBase64(nextAudio);
+}
+
+
+
+ws.onmessage = async (event) => {
+    try {
+        const data = JSON.parse(event.data);
+        
+        if (data.status === 'success') {
+            
+            if (data.speech_status === 'started') {
+                speechStatus.textContent = 'Speech Detected';
+                speechStatus.className = 'status-indicator speaking pulse';
+            } else if (data.speech_status === 'ended') {
+                speechStatus.textContent = 'waiting...';
+                speechStatus.className = 'status-indicator';
+            }
+            
+           
+            if (data.llm_response) {
+                
+                if (data.transcription) {
+                    transcriptionDiv.textContent = `You: ${data.transcription}\nAssistant: ${data.llm_response}`;
+                }
+                
+                if (data.tts_audio) {
+                    audioQueue.push(data.tts_audio);
+                    processAudioQueue();
+                }
+            }
+        } else if (data.status === 'error') {
+            console.error('Error:', data.message);
+            speechStatus.textContent = 'Error occurred';
+            speechStatus.className = 'status-indicator disconnected';
+        }
+    } catch (error) {
+        console.error('Error processing message:', error);
+    }
+};
+
+    </script> 
+   
+   
+</body>
+</html>
