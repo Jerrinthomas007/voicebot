@@ -302,19 +302,14 @@ class ConnectionManager:
         prepared_message = {}
         for key, value in message.items():
             if isinstance(value, bytes):
-                # Convert bytes to base64 string
                 prepared_message[key] = base64.b64encode(value).decode('utf-8')
             elif isinstance(value, (int, float, str, bool, type(None))):
-                # These types are JSON serializable
                 prepared_message[key] = value
             elif isinstance(value, (list, tuple)):
-                # Handle lists and tuples
                 prepared_message[key] = [self.prepare_value(item) for item in value]
             elif isinstance(value, dict):
-                # Handle nested dictionaries
                 prepared_message[key] = self.prepare_message(value)
             else:
-                # Convert other types to string
                 prepared_message[key] = str(value)
         return prepared_message
 
@@ -337,8 +332,8 @@ class SileroVAD:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.load_model()
         self.reset_state()
-        self.SILENCE_THRESHOLD = 1.5  # Increased silence threshold
-        self.MIN_SPEECH_DURATION = 0.5  # Minimum speech duration in seconds
+        self.SILENCE_THRESHOLD = 1.5  
+        self.MIN_SPEECH_DURATION = 0.5  
         self.speech_start_time = None
         logger.info(f"Initialized SileroVAD with device: {self.device}")
     
@@ -373,14 +368,14 @@ class SileroVAD:
                     audio_tensor = audio_tensor / torch.abs(audio_tensor).max()
                 
                 rms_energy = torch.sqrt(torch.mean(audio_tensor**2))
-                energy_threshold = 0.005  # Increased energy threshold
+                energy_threshold = 0.005  #
                 
                 speech_timestamps = self.get_speech_timestamps(
                     audio_tensor,
                     self.model,
-                    threshold=0.5,  # Increased VAD threshold
+                    threshold=0.5,  
                     sampling_rate=sample_rate,
-                    min_speech_duration_ms=250,  # Increased minimum speech duration
+                    min_speech_duration_ms=250,  
                     return_seconds=True
                 )
                 
@@ -480,13 +475,13 @@ async def process_audio_chunk(audio_data: bytes, client_id: str, sample_rate: in
             try:
                 transcription = await get_transcription(vad_result["buffered_audio"], sample_rate)
                 if transcription:
-                    # Save ASR transcription to conversation log
-                    conversation_log_filepath = save_conversation_log(client_id, "asr", transcription)
+                    
+                    
                     
                     llm_response = await get_llm_response(transcription, client_id, client_id)
                     if llm_response:
-                        # Save TTS transcription to conversation log
-                        save_conversation_log(client_id, "tts", llm_response)
+                       
+                        
                         
                         tts_audio = await tts_handler.text_to_speech_stream(llm_response)
                         if tts_audio and isinstance(tts_audio, bytes):
@@ -494,7 +489,7 @@ async def process_audio_chunk(audio_data: bytes, client_id: str, sample_rate: in
                                 "transcription": transcription,
                                 "llm_response": llm_response,
                                 "tts_audio": tts_audio,
-                                "conversation_log_filepath": conversation_log_filepath
+                               
                             })
                         else:
                             logger.error(f"Invalid TTS audio format: {type(tts_audio)}")
@@ -514,40 +509,6 @@ async def process_audio_chunk(audio_data: bytes, client_id: str, sample_rate: in
             "message": str(e)
         }
 
-def save_conversation_log(client_id: str, message_type: str, content: str) -> str:
-    """
-    Save conversation messages to a single log file.
-    
-    Args:
-        client_id (str): Unique identifier for the conversation
-        message_type (str): Type of message ('asr', 'tts', 'welcome')
-        content (str): Message content
-    
-    Returns:
-        str: Path to the conversation log file
-    """
-    # Create output directory if it doesn't exist
-    output_dir = "conversation_logs/"
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Generate unique filename with timestamp
-    timestamp = datetime.now().strftime("%Y%m%d")
-    filename = f"conversation_{client_id}_{timestamp}.txt"
-    filepath = os.path.join(output_dir, filename)
-    
-    try:
-        # Append message to the file with timestamp and type
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_entry = f"[{current_time}] [{message_type.upper()}] {content}\n"
-        
-        with open(filepath, 'a') as f:
-            f.write(log_entry)
-        
-        logger.info(f"Conversation log updated: {filepath}")
-        return filepath
-    except Exception as e:
-        logger.error(f"Error saving conversation log: {str(e)}")
-        return ""
 @app.on_event("startup")
 async def startup_event():
     """Initialize models and resources on startup."""
@@ -597,11 +558,10 @@ async def websocket_endpoint(websocket: WebSocket):
                             logger.info(f"Client {client_id} requested end of session")
                             break
                         elif msg.get("type") == "welcome":
-                            # Handle welcome message
+                           
                             welcome_msg = msg["message"]
                             
-                            # Save welcome message to conversation log
-                            conversation_log_filepath = save_conversation_log(client_id, "welcome", welcome_msg)
+                          
                             
                             welcome_audio = await tts_handler.text_to_speech_stream(welcome_msg)
                             welcome_response = {
@@ -610,7 +570,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                 "transcription": "",
                                 "llm_response": welcome_msg,
                                 "tts_audio": welcome_audio,
-                                "conversation_log_filepath": conversation_log_filepath
+                               
                             }
                             await manager.send_message(client_id, welcome_response)
                     except json.JSONDecodeError:
